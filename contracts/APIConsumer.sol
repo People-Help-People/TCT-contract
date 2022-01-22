@@ -90,6 +90,10 @@ contract APIConsumer is ChainlinkClient {
         emit RequestComplete(nftRequestString); // event to be listened by the client
     }   
 
+    function getNFTRequestStatus(string memory _queryParams) public view returns (uint8){
+        return nftVerificationMap[_queryParams];
+    }
+
     // Twitter Account Verification
 
     function requestTwitterVerification(string memory _tweet, string memory _randid) public returns (bytes32 requestId)
@@ -112,11 +116,12 @@ contract APIConsumer is ChainlinkClient {
         emit RequestComplete("_user"); // event to be listened by the client
     }
 
+    function getTwitterVerificationStatus(address _account) public view returns (string memory){
+        return twitterAccountVerificationMap[_account];
+    }
+
     function withdrawLink() external {
         ERC20 tokenContract = ERC20(0xa36085F69e2889c224210F603D836748e7dC0088);
-        
-        // transfer the token from address of this contract
-        // to address of the user (executing the withdrawToken() function)
         tokenContract.transfer(msg.sender, tokenContract.balanceOf(address(this)));
     } 
 }
