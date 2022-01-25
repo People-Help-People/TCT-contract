@@ -12,7 +12,8 @@ import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 
 contract APIConsumer is ChainlinkClient {
     using Chainlink for Chainlink.Request;
-      
+
+    address private owner;      
     address private oracle;
     bytes32 private boolJobId;
     bytes32 private stringJobId;
@@ -31,6 +32,7 @@ contract APIConsumer is ChainlinkClient {
 
    
     constructor() {
+        owner = msg.sender;
         setPublicChainlinkToken();
         oracle = 0xc57B33452b4F7BB189bB5AfaE9cc4aBa1f7a4FD8;
         boolJobId = "bc746611ebee40a3989bbe49e12a02b9"; 
@@ -79,6 +81,7 @@ contract APIConsumer is ChainlinkClient {
         requestNFTmap[requestIdentifier] = _queryParams;
         return requestIdentifier;
     }
+    // SM -> Oracle -> Server -> Oracle -> SM -> CLient
     
     /**
      * Receive the response in the form of uint256
@@ -120,7 +123,8 @@ contract APIConsumer is ChainlinkClient {
         return twitterAccountVerificationMap[_account];
     }
 
-    function withdrawLink() external {
+    function withdrawLink() external {        
+        require(msg.sender == owner, "Only owner can withdraw!!!");
         ERC20 tokenContract = ERC20(0xa36085F69e2889c224210F603D836748e7dC0088);
         tokenContract.transfer(msg.sender, tokenContract.balanceOf(address(this)));
     } 
