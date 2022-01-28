@@ -4,13 +4,14 @@ pragma solidity ^0.8.7;
 
 import "@chainlink/contracts/src/v0.8/ChainlinkClient.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import "./TruthToken.sol";
 
 /**
  * THIS IS AN EXAMPLE CONTRACT WHICH USES HARDCODED VALUES FOR CLARITY.
  * PLEASE DO NOT USE THIS CODE IN PRODUCTION.
  */
 
-contract APIConsumer is ChainlinkClient {
+contract TCT is ChainlinkClient {
     using Chainlink for Chainlink.Request;
 
     address private owner;      
@@ -19,6 +20,8 @@ contract APIConsumer is ChainlinkClient {
     bytes32 private stringJobId;
     uint256 private fee;
     bytes32 private requestIdentifier;  
+
+    TruthToken public truthTokens;
 
     mapping(bytes32 => string) internal requestNFTmap;
     mapping(string => uint8) public nftVerificationMap;  
@@ -38,6 +41,7 @@ contract APIConsumer is ChainlinkClient {
         boolJobId = "bc746611ebee40a3989bbe49e12a02b9"; 
         stringJobId = "7401f318127148a894c00c292e486ffd";
         fee = 0.1 * 10 ** 18; // (Varies by network and job)
+        truthTokens = new TruthToken(1614317 * 10 ** 18); // Initial mint of Truth Tokens
     }
 
     // UTILS
@@ -59,7 +63,7 @@ contract APIConsumer is ChainlinkClient {
         return string(babcde);
     }    
 
-    function bytes32ToString(bytes32 _bytes32) public pure returns (string memory) {
+    function bytes32ToString(bytes32 _bytes32) internal pure returns (string memory) {
         uint8 i = 0;
         while(i < 32 && _bytes32[i] != 0) {
             i++;
@@ -71,31 +75,31 @@ contract APIConsumer is ChainlinkClient {
         return string(bytesArray);
     }
 
-    function requestNFTVerification(string memory _queryParams) public returns (bytes32 requestId)
-    {
-        Chainlink.Request memory request = buildChainlinkRequest(boolJobId, address(this), this.fulfillNFTRequest.selector);
-        request.add("get", strConcat("https://the-collective-truth.herokuapp.com/nft/verify?",_queryParams,"","",""));
+    // function requestNFTVerification(string memory _queryParams) public returns (bytes32 requestId)
+    // {
+    //     Chainlink.Request memory request = buildChainlinkRequest(boolJobId, address(this), this.fulfillNFTRequest.selector);
+    //     request.add("get", strConcat("https://the-collective-truth.herokuapp.com/nft/verify?",_queryParams,"","",""));
         
-        request.add("path", "success");        
-        requestIdentifier = sendChainlinkRequestTo(oracle, request, fee);
-        requestNFTmap[requestIdentifier] = _queryParams;
-        return requestIdentifier;
-    }
-    // SM -> Oracle -> Server -> Oracle -> SM -> CLient
+    //     request.add("path", "success");        
+    //     requestIdentifier = sendChainlinkRequestTo(oracle, request, fee);
+    //     requestNFTmap[requestIdentifier] = _queryParams;
+    //     return requestIdentifier;
+    // }
+    // // SM -> Oracle -> Server -> Oracle -> SM -> CLient
     
-    /**
-     * Receive the response in the form of uint256
-     */ 
-    function fulfillNFTRequest(bytes32 _requestId, bool _result) public recordChainlinkFulfillment(_requestId)
-    {
-        string memory nftRequestString = requestNFTmap[_requestId];
-        nftVerificationMap[nftRequestString] = _result ? 1 : 2; // update NFT verification result
-        emit RequestComplete(nftRequestString); // event to be listened by the client
-    }   
+    // /**
+    //  * Receive the response in the form of uint256
+    //  */ 
+    // function fulfillNFTRequest(bytes32 _requestId, bool _result) public recordChainlinkFulfillment(_requestId)
+    // {
+    //     string memory nftRequestString = requestNFTmap[_requestId];
+    //     nftVerificationMap[nftRequestString] = _result ? 1 : 2; // update NFT verification result
+    //     emit RequestComplete(nftRequestString); // event to be listened by the client
+    // }   
 
-    function getNFTRequestStatus(string memory _queryParams) public view returns (uint8){
-        return nftVerificationMap[_queryParams];
-    }
+    // function getNFTRequestStatus(string memory _queryParams) public view returns (uint8){
+    //     return nftVerificationMap[_queryParams];
+    // }
 
     // Twitter Account Verification
 
@@ -112,15 +116,22 @@ contract APIConsumer is ChainlinkClient {
     /**
      * Receive the response in the form of uint256
      */ 
-    function fulfillTwitterAccountRequest(bytes32 _requestId, bytes32 _username) public recordChainlinkFulfillment(_requestId)
+    function fulfillTwitterAccountRequest(bytes32 _requestId, bytes32 _username) public payable recordChainlinkFulfillment(_requestId)
     {
         address _user = requestTwitterAccountmap[_requestId];
         twitterAccountVerificationMap[_user] = bytes32ToString(_username); // update Twitter Account username
+        truthTokens.transfer(_user, 10**19); // Joining Bonus
         emit RequestComplete("_user"); // event to be listened by the client
     }
 
     function getTwitterVerificationStatus(address _account) public view returns (string memory){
         return twitterAccountVerificationMap[_account];
+    }
+
+    // Truth Tokens
+
+    function truthBalance(address _account) public view returns(uint256){
+        return truthTokens.balanceOf(_account);
     }
 
     function withdrawLink() external {        
